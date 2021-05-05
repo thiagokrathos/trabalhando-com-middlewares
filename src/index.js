@@ -10,19 +10,69 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find(user => username === user.username);
+
+  if (!user) {
+    return response.status(404).json({ error: 'User does not exists' });
+  }
+
+  request.user = user;
+
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  const { pro, todos } = user;
+
+  console.log(pro, todos);
+
+  if (!pro && todos.length > 9) {
+    return response.status(403).json({ error: "User reached maximum number of Todos. Time to go Pro!" });
+  }
+
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+
+  const user = users.find(user => user.username === username);
+
+  if (!user) {
+    return response.status(404).json({ error: 'User does not exists' });
+  }
+
+  const uuidValido = validate(id);
+
+  if(uuidValido){
+    const todo = user.todos.find(todo => todo.id === id);
+    if(todo){
+      request.user = user;
+      request.todo = todo;
+      return next();
+    }else{
+      return response.status(404).json({ Error: 'Task(Todo) not found for the given ID.' });
+    }
+  }else{
+    return response.status(400).json({ Error: 'Informed id, not a UUID.' });
+  }
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find(user => user.id === id);
+
+  if(!user){
+    return response.status(404).json({ Error: 'User not Found.' });
+  }
+  request.user = user;
+  return next();
 }
 
 app.post('/users', (request, response) => {
@@ -95,7 +145,8 @@ app.put('/todos/:id', checksTodoExists, (request, response) => {
   todo.title = title;
   todo.deadline = new Date(deadline);
 
-  return response.json(todo);
+  return response.json(todo)
+  
 });
 
 app.patch('/todos/:id/done', checksTodoExists, (request, response) => {
